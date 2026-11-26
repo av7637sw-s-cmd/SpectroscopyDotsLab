@@ -1,0 +1,33 @@
+from IPython.display import display
+
+fig, ax = plt.subplots(figsize=(10, 5))
+
+ax.plot(
+    wavelength_green[valid_green],
+    intensity_green[valid_green],
+    label="Green dots"
+)
+
+ax.plot(
+    wavelength_orange[valid_orange],
+    intensity_orange[valid_orange],
+    label="Orange dots"
+)
+
+# Mark emission peaks
+ax.axvline(green_peak, color='green', linestyle='--',
+           label=f"Green peak: {green_peak:.1f} nm")
+
+ax.axvline(orange_peak, color='orange', linestyle='--',
+           label=f"Orange peak: {orange_peak:.1f} nm")
+
+ax.set_xlabel("Wavelength (nm)")
+ax.set_ylabel("Intensity")
+ax.set_title("Quantum Dot Emission Spectra")
+
+ax.legend()
+ax.grid()
+
+plt.tight_layout()
+display(fig)
+plt.close(fig)
