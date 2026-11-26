@@ -1,0 +1,86 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Read the four CSV files
+solvent_on = pd.read_csv('/content/solvent_on.csv', sep=';', decimal=',')
+solvent_off = pd.read_csv('/content/solvent_off.csv', sep=';', decimal=',')
+green = pd.read_csv('/content/green_abs.csv', sep=';', decimal=',')
+orange = pd.read_csv('/content/orange_abs.csv', sep=';', decimal=',')
+
+# Extract wavelength and intensity data
+wavelength_S = solvent_on["Wavelength (nm)"].to_numpy(dtype=float)
+S = solvent_on["Intensity Source #3"].to_numpy(dtype=float)
+
+wavelength_D = solvent_off["Wavelength (nm)"].to_numpy(dtype=float)
+D = solvent_off["Intensity Source #4"].to_numpy(dtype=float)
+
+wavelength_green = green["Wavelength (nm)"].to_numpy(dtype=float)
+Q_green = green["Intensity Source #1"].to_numpy(dtype=float)
+
+wavelength_orange = orange["Wavelength (nm)"].to_numpy(dtype=float)
+Q_orange = orange["Intensity Source #2"].to_numpy(dtype=float)
+
+# Keep only wavelengths shared by all four datasets
+lower = max(wavelength_S.min(), wavelength_D.min(),
+            wavelength_green.min(), wavelength_orange.min())
+
+upper = min(wavelength_S.max(), wavelength_D.max(),
+            wavelength_green.max(), wavelength_orange.max())
+
+wavelength = wavelength_S[
+    (wavelength_S >= lower) & (wavelength_S <= upper)
+]
+
+# Interpolate all intensities onto the same wavelength values
+S_common = np.interp(wavelength, wavelength_S, S)
+D_common = np.interp(wavelength, wavelength_D, D)
+Q_green_common = np.interp(wavelength, wavelength_green, Q_green)
+Q_orange_common = np.interp(wavelength, wavelength_orange, Q_orange)
+
+# Calculate absorption, excluding zero or near-zero denominators
+denominator = S_common - D_common
+valid = (
+    np.isfinite(denominator) &
+    np.isfinite(Q_green_common) &
+    np.isfinite(Q_orange_common) &
+    (np.abs(denominator) > 1e-10)
+)
+
+absorption_green = np.full(len(wavelength), np.nan)
+absorption_orange = np.full(len(wavelength), np.nan)
+
+absorption_green[valid] = (
+    1 - (Q_green_common[valid] - D_common[valid]) / denominator[valid]
+)
+
+absorption_orange[valid] = (
+    1 - (Q_orange_common[valid] - D_common[valid]) / denominator[valid]
+)
+
+# Plot both absorption spectra
+
+from IPython.display import display
+
+fig, ax = plt.subplots(figsize=(10, 6))
+
+ax.plot(
+    wavelength[valid],
+    absorption_green[valid],
+    label="Green quantum dots"
+)
+
+ax.plot(
+    wavelength[valid],
+    absorption_orange[valid],
+    label="Orange quantum dots"
+)
+
+ax.set_xlabel("Wavelength (nm)")
+ax.set_ylabel("Absorption")
+ax.set_title("Absorption Spectra of Green and Orange Quantum Dots")
+ax.legend()
+ax.grid(True)
+
+display(fig)
+plt.close(fig)
